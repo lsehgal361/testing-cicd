@@ -50,3 +50,5 @@ jobs:
           --branch "${{github.ref_name}}" \
           --source "GITHUB_ACTIONS" \
           --repo-url "${{github.server_url}}/${{github.repository}}"
+		  --var-file "terraform.tfvars" \
+          --create-repo-if-missing
