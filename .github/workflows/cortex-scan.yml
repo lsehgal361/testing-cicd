@@ -45,4 +45,4 @@ jobs:
           chmod +x cortexcli
 
           echo "==> Executing Cortex scan with terraform.tfvars..."
-          ./cortexcli code scan --api-base-url="$CORTEX_API_URL" --api-key="$CORTEX_API_KEY" --api-key-id="$CORTEX_API_KEY_ID" --directory="." --repo-id="${{ github.repository }}" --branch="${{ github.ref_name }}" --source="GITHUB_ACTIONS" --var-file="terraform.tfvars" --create-repo-if-missing
+          ./cortexcli --api-base-url="$CORTEX_API_URL" --api-key="$CORTEX_API_KEY" --api-key-id="$CORTEX_API_KEY_ID" code scan --directory="." --repo-id="${{ github.repository }}" --branch="${{ github.ref_name }}" --source="GITHUB_ACTIONS" --var-file="terraform.tfvars" --create-repo-if-missing
