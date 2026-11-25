@@ -1,54 +1,58 @@
-name: Cortex CLI Code Scan
+name: Cortex AppSec Scan
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
-
-env:
-  CORTEX_API_KEY: ${{ secrets.CORTEX_API_KEY }}
-  CORTEX_API_KEY_ID: ${{ secrets.CORTEX_API_KEY_ID }}
-  CORTEX_API_URL: https://api-pcsjustposturecortexcloud.xdr.us.paloaltonetworks.com
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # Allows you to manually trigger the run anytime
 
 jobs:
-  cortex-code-scan:
+  cortex-scan:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 22
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-    - name: Verify Node.js Version
-      run: node -v
+      - name: Run Cortex CLI Code Scan
+        env:
+          CORTEX_API_KEY: ${{ secrets.CORTEX_API_KEY }}
+          CORTEX_API_KEY_ID: ${{ secrets.CORTEX_API_KEY_ID }}
+          # REPLACE with your tenant's actual API base URL from Step 1:
+          CORTEX_API_URL: "https://api-pcsjustposturecortexcloud.xdr.us.paloaltonetworks.com"
+        run: |
+          set -e
 
-    - name: Download cortexcli
-      run: |
-        set -x
-        crtx_resp=$(curl "${CORTEX_API_URL}/public_api/v1/unified-cli/releases/download-link?os=linux&architecture=amd64" \
-          -H "x-xdr-auth-id: ${CORTEX_API_KEY_ID}" \
-          -H "Authorization: ${CORTEX_API_KEY}")
-        crtx_url=$(echo $crtx_resp | jq -r ".signed_url")
-        curl -o cortexcli $crtx_url
-        chmod +x cortexcli
-        ./cortexcli --version
+          echo "==> Requesting CLI binary download link..."
+          crtx_resp=$(curl -s "${CORTEX_API_URL}/public_api/v1/unified-cli/releases/download-link?os=linux&architecture=amd64" \
+            -H "x-xdr-auth-id: ${CORTEX_API_KEY_ID}" \
+            -H "Authorization: ${CORTEX_API_KEY}")
 
-    - name: Run Cortex CLI Code Scan
-      run: |
-        ./cortexcli \
-          --api-base-url "${CORTEX_API_URL}" \
-          --api-key "${CORTEX_API_KEY}" \
-          --api-key-id "${CORTEX_API_KEY_ID}" \
-          code scan \
-          --directory "${{ github.workspace }}" \
-          --repo-id "${{ github.repository }}" \
-          --branch "${{ github.ref_name }}" \
-          --source "GITHUB_ACTIONS" \
-          --repo-url "${{ github.server_url }}/${{ github.repository }}" \
-          --var-file "terraform.tfvars" \
-          --create-repo-if-missing
+          crtx_url=$(echo "$crtx_resp" | jq -r ".signed_url")
+
+          if [ -z "$crtx_url" ] || [ "$crtx_url" = "null" ]; then
+            echo "Error fetching CLI download URL. Check API keys and URL."
+            echo "$crtx_resp"
+            exit 1
+          fi
+
+          echo "==> Downloading cortexcli..."
+          curl -s -o cortexcli "$crtx_url"
+          chmod +x cortexcli
+
+          echo "==> Executing Cortex scan with terraform.tfvars..."
+          ./cortexcli code scan \
+            --api-base-url "$CORTEX_API_URL" \
+            --api-key "$CORTEX_API_KEY" \
+            --api-key-id "$CORTEX_API_KEY_ID" \
+            --directory "." \
+            --repo-id "${{ github.repository }}" \
+            --branch "${{ github.ref_name }}" \
+            --source "GITHUB_ACTIONS" \
+            --var-file "terraform.tfvars" \
+            --create-repo-if-missing
