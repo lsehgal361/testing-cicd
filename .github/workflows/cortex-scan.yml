@@ -24,7 +24,7 @@ jobs:
           CORTEX_API_KEY: ${{ secrets.CORTEX_API_KEY }}
           CORTEX_API_KEY_ID: ${{ secrets.CORTEX_API_KEY_ID }}
           # REPLACE with your tenant's actual API base URL from Step 1:
-          CORTEX_API_URL: "https://api-pcsjustposturecortexcloud.xdr.us.paloaltonetworks.com"
+          CORTEX_API_URL: "https://api-pcscortexcloudeppnextgen.xdr.us.paloaltonetworks.com"
         run: |
           set -e
 
